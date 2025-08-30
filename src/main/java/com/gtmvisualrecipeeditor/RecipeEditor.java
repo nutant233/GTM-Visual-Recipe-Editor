@@ -26,6 +26,7 @@ import com.gregtechceu.gtceu.common.data.GTRecipeTypes;
 import com.gregtechceu.gtceu.integration.ae2.gui.widget.AETextInputButtonWidget;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
@@ -242,7 +243,22 @@ public class RecipeEditor implements IItemUIFactory, IFancyUIProvider {
             if (cd.isRemote) return;
             StringBuilder stringBuilder = new StringBuilder();
             if (machine.isGT) {
-                stringBuilder.append("\nevent.recipes.gtceu.").append(machine.recipeType.registryName.getPath()).append("(\"").append(machine.id).append("\")\n");
+                String id = machine.id;
+                if (id.isEmpty()) {
+                    for (int i = 0; i < machine.exportItems.getSlots(); i++) {
+                        if (!id.isEmpty()) break;
+                        ItemStack stack = machine.exportItems.getStackInSlot(i);
+                        if (stack.isEmpty()) continue;
+                        id = BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
+                    }
+                    for (int i = 0; i < machine.exportFluids.getSize(); i++) {
+                        if (!id.isEmpty()) break;
+                        FluidStack stack = machine.exportFluids.getFluidInTank(i);
+                        if (stack.isEmpty()) continue;
+                        id = BuiltInRegistries.FLUID.getKey(stack.getFluid()).getPath();
+                    }
+                }
+                stringBuilder.append("\nevent.recipes.gtceu.").append(machine.recipeType.registryName.getPath()).append("(\"").append(id).append("\")\n");
                 for (int i = 0; i < machine.importItems.getSlots(); i++) {
                     ItemStack stack = machine.importItems.getStackInSlot(i);
                     if (stack.isEmpty()) continue;
@@ -280,7 +296,7 @@ public class RecipeEditor implements IItemUIFactory, IFancyUIProvider {
                 stringBuilder.append(".duration(").append(machine.duration).append(")\n");
             } else {
                 if (machine.recipeType == GTRecipeTypes.ASSEMBLER_RECIPES) {
-                    stringBuilder.append("\nevent.shaped(\"").append(machine.exportItems.getStackInSlot(0).kjs$getId()).append("\", [\n    \"");
+                    stringBuilder.append("\nevent.shaped(\"").append(getItemId(machine.exportItems.getStackInSlot(0).getItem())).append("\", [\n    \"");
                     char c = 'A';
                     Map<String, Character> map = new LinkedHashMap<>();
                     for (int i = 0, j = 0; i < machine.importItems.getSlots(); i++, j++) {
@@ -302,7 +318,7 @@ public class RecipeEditor implements IItemUIFactory, IFancyUIProvider {
                     map.forEach((k, v) -> stringBuilder.append("\n    ").append(v).append(":").append(" \"").append(k).append("\","));
                     stringBuilder.deleteCharAt(stringBuilder.length() - 1).append("\n})");
                 } else if (machine.recipeType == GTRecipeTypes.FURNACE_RECIPES) {
-                    stringBuilder.append("\nevent.smelting(\"").append(machine.exportItems.getStackInSlot(0).kjs$getId()).append("\", \"").append(machine.importItems.getStackInSlot(0).kjs$getId()).append("\")");
+                    stringBuilder.append("\nevent.smelting(\"").append(getItemId(machine.exportItems.getStackInSlot(0).getItem())).append("\", \"").append(getItemId(machine.importItems.getStackInSlot(0).getItem())).append("\")");
                 }
             }
             ConsoleJS.SERVER.info(stringBuilder.toString());
@@ -311,14 +327,7 @@ public class RecipeEditor implements IItemUIFactory, IFancyUIProvider {
     }
 
     private static String getItemId(Item item) {
-        // if (Tooltips.universalCircuitSet.contains(item)) {
-        // for (int tier : GTMachineUtils.ALL_TIERS) {
-        // if (GTOItems.UNIVERSAL_CIRCUIT[tier].is(item)) {
-        // return "#gtceu:circuits/" + GTValues.VN[tier].toLowerCase();
-        // }
-        // }
-        // }
-        return item.kjs$getId();
+        return BuiltInRegistries.ITEM.getKey(item).toString();
     }
 
     private static int getXOffset(GTRecipeType recipe) {

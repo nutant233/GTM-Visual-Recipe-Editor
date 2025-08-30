@@ -73,6 +73,6 @@ public class DummyMachine extends MetaMachine {
     }
 
     public static DummyMachine createDummyMachine(BlockEntityType<?> type, BlockPos pos, BlockState blockState, GTRecipeType recipeType) {
-        return new DummyMachine(MetaMachineBlockEntity.createBlockEntity(type, pos, blockState), recipeType);
+        return new DummyMachine(new MetaMachineBlockEntity(type, pos, blockState), recipeType);
     }
 }
